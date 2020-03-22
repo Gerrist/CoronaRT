@@ -1,0 +1,283 @@
+@import url('https://fonts.googleapis.com/css?family=Inter:100,200,300,400,500,700,900&display=swap');
+
+$m: #223ae3;
+
+@mixin cc {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@mixin font {
+    font-family: 'Inter', sans-serif;
+}
+
+body{
+    @include font;
+    margin: 0px;
+}
+
+activity#main{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: $m;
+    text-align: center;
+}
+
+activity#main content{
+    color: white;
+}
+
+activity#operatorSelector, activity#lineSelector, activity#tripSelector, activity#tripComposer, activity#trip{
+    background-color: $m;
+
+    header{
+        text-align: center;
+        padding: 20px;
+        font-size: 25px;
+        font-weight: 500;
+        color: white;
+    }
+
+    subheader{
+        text-align: center;
+        padding: 20px;
+        padding-top: 0;
+        font-size: 18px;
+        font-weight: 500;
+        color: white;
+        display: block;
+    }
+
+    content{
+
+    }
+
+    section {
+        margin: 20px;
+        margin-top: 0;
+
+        height: calc(100% - 75px);
+        overflow: scroll;
+
+
+
+        border-radius: 6px;
+        color: black;
+
+        div{
+            margin: 10px;
+            border-radius: 6px;
+            padding: 20px;
+            background-color: white;
+            color: black;
+        }
+    }
+}
+
+activity#tripSelector, activity#tripComposer{
+    .trip{
+        margin-bottom: 20px;
+
+        div{
+            margin: unset;
+            padding: unset;
+        }
+
+        .tripNumber{
+            padding: 5px;
+            font-weight: bold;
+        }
+
+        .firstStop{
+            padding: 5px;
+
+            span{
+                font-weight: 500;
+            }
+        }
+
+        .lastStop{
+            padding: 5px;
+
+            span{
+                font-weight: 500;
+            }
+        }
+    }
+}
+
+activity#tripComposer{
+    .box{
+        margin: 20px 10px;
+        padding: 10px;
+        border-radius: 6px;
+        background-color: white;
+        background-image: -webkit-gradient(linear, left top, left bottom, from(rgba(221, 221, 221,0.8)), to(rgba(255, 255, 255,0.2)), color-stop(.5,#fff));
+
+        div{
+            padding: 5px;
+        }
+
+        &.calls{
+            height: 30%;
+            overflow: scroll;
+        }
+    }
+}
+
+input{
+
+    border-radius: 6px;
+    border: 1px #262626 solid;
+    color: black;
+    background-color: transparent;
+    outline: 0;
+    padding: 14px;
+    width: calc(100% - 20px);
+    margin: 10px;
+    display: block;
+    box-sizing: border-box;
+    transition: .25s;
+    font-weight: 400;
+
+    @include font;
+
+    &:focus{
+        //border-color: $m;
+    }
+
+    &::placeholder{
+        color: #555;
+    }
+}
+
+
+button{
+    border: 0px;
+    margin: 10px;
+    padding: 15px 20px;
+    border-radius: 6px;
+    background-color: $m;
+    width: calc(100% - 20px);
+    color: white;
+    box-sizing: border-box;
+    outline: 0;
+    font-weight: 400;
+
+    @include font;
+}
+
+.button-inverted{
+
+    color: $m;
+    background-color: white;
+}
+
+.button-inline{
+    display: inline-block;
+    width: unset;
+}
+
+notification{
+    position: fixed;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    backdrop-filter: blur(3px);
+
+    ncontent{
+        background-color: white;
+        border-radius: 6px;
+        width: 40%;
+        padding: 15px;
+        box-shadow: 0px 0px 5px 0px rgba(75, 75, 75, 0.42);
+
+        ntitle{
+            display: block;
+            padding: 10px;
+            font-weight: 600;
+        }
+
+        ntext{
+            display: block;
+            padding: 10px;
+            font-weight: 300;
+        }
+
+        nbuttons{
+            display: block;
+        }
+    }
+
+    @include cc;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+$offset: 187;
+$duration: 1.4s;
+
+.spinner {
+    animation: rotator $duration linear infinite;
+}
+
+@keyframes rotator {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(270deg); }
+}
+
+.path {
+    stroke-dasharray: $offset;
+    stroke-dashoffset: 0;
+    transform-origin: center;
+    animation:
+            dash $duration ease-in-out infinite,
+            colors ($duration*4) ease-in-out infinite;
+}
+
+@keyframes colors {
+    0% { stroke: #ffffff; }
+    100% { stroke: #ffffff; }
+}
+
+@keyframes dash {
+    0% { stroke-dashoffset: $offset; }
+    50% {
+        stroke-dashoffset: $offset/4;
+        transform:rotate(135deg);
+    }
+    100% {
+        stroke-dashoffset: $offset;
+        transform:rotate(450deg);
+    }
+
+}
+

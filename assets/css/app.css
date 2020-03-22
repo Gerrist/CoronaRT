@@ -1,0 +1,209 @@
+@import url("https://fonts.googleapis.com/css?family=Inter:100,200,300,400,500,700,900&display=swap");
+body {
+  font-family: "Inter", sans-serif;
+  margin: 0px;
+}
+
+activity#main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #223ae3;
+  text-align: center;
+}
+
+activity#main content {
+  color: white;
+}
+
+activity#operatorSelector, activity#lineSelector, activity#tripSelector, activity#tripComposer, activity#trip {
+  background-color: #223ae3;
+}
+activity#operatorSelector header, activity#lineSelector header, activity#tripSelector header, activity#tripComposer header, activity#trip header {
+  text-align: center;
+  padding: 20px;
+  font-size: 25px;
+  font-weight: 500;
+  color: white;
+}
+activity#operatorSelector subheader, activity#lineSelector subheader, activity#tripSelector subheader, activity#tripComposer subheader, activity#trip subheader {
+  text-align: center;
+  padding: 20px;
+  padding-top: 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: white;
+  display: block;
+}
+activity#operatorSelector section, activity#lineSelector section, activity#tripSelector section, activity#tripComposer section, activity#trip section {
+  margin: 20px;
+  margin-top: 0;
+  height: calc(100% - 75px);
+  overflow: scroll;
+  border-radius: 6px;
+  color: black;
+}
+activity#operatorSelector section div, activity#lineSelector section div, activity#tripSelector section div, activity#tripComposer section div, activity#trip section div {
+  margin: 10px;
+  border-radius: 6px;
+  padding: 20px;
+  background-color: white;
+  color: black;
+}
+
+activity#tripSelector .trip, activity#tripComposer .trip {
+  margin-bottom: 20px;
+}
+activity#tripSelector .trip div, activity#tripComposer .trip div {
+  margin: unset;
+  padding: unset;
+}
+activity#tripSelector .trip .tripNumber, activity#tripComposer .trip .tripNumber {
+  padding: 5px;
+  font-weight: bold;
+}
+activity#tripSelector .trip .firstStop, activity#tripComposer .trip .firstStop {
+  padding: 5px;
+}
+activity#tripSelector .trip .firstStop span, activity#tripComposer .trip .firstStop span {
+  font-weight: 500;
+}
+activity#tripSelector .trip .lastStop, activity#tripComposer .trip .lastStop {
+  padding: 5px;
+}
+activity#tripSelector .trip .lastStop span, activity#tripComposer .trip .lastStop span {
+  font-weight: 500;
+}
+
+activity#tripComposer .box {
+  margin: 20px 10px;
+  padding: 10px;
+  border-radius: 6px;
+  background-color: white;
+  background-image: -webkit-gradient(linear, left top, left bottom, from(rgba(221, 221, 221, 0.8)), to(rgba(255, 255, 255, 0.2)), color-stop(0.5, #fff));
+}
+activity#tripComposer .box div {
+  padding: 5px;
+}
+activity#tripComposer .box.calls {
+  height: 30%;
+  overflow: scroll;
+}
+
+input {
+  border-radius: 6px;
+  border: 1px #262626 solid;
+  color: black;
+  background-color: transparent;
+  outline: 0;
+  padding: 14px;
+  width: calc(100% - 20px);
+  margin: 10px;
+  display: block;
+  box-sizing: border-box;
+  transition: 0.25s;
+  font-weight: 400;
+  font-family: "Inter", sans-serif;
+}
+input::placeholder {
+  color: #555;
+}
+
+button {
+  border: 0px;
+  margin: 10px;
+  padding: 15px 20px;
+  border-radius: 6px;
+  background-color: #223ae3;
+  width: calc(100% - 20px);
+  color: white;
+  box-sizing: border-box;
+  outline: 0;
+  font-weight: 400;
+  font-family: "Inter", sans-serif;
+}
+
+.button-inverted {
+  color: #223ae3;
+  background-color: white;
+}
+
+.button-inline {
+  display: inline-block;
+  width: unset;
+}
+
+notification {
+  position: fixed;
+  left: 0px;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+notification ncontent {
+  background-color: white;
+  border-radius: 6px;
+  width: 40%;
+  padding: 15px;
+  box-shadow: 0px 0px 5px 0px rgba(75, 75, 75, 0.42);
+}
+notification ncontent ntitle {
+  display: block;
+  padding: 10px;
+  font-weight: 600;
+}
+notification ncontent ntext {
+  display: block;
+  padding: 10px;
+  font-weight: 300;
+}
+notification ncontent nbuttons {
+  display: block;
+}
+
+.spinner {
+  animation: rotator 1.4s linear infinite;
+}
+
+@keyframes rotator {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(270deg);
+  }
+}
+.path {
+  stroke-dasharray: 187;
+  stroke-dashoffset: 0;
+  transform-origin: center;
+  animation: dash 1.4s ease-in-out infinite, colors 5.6s ease-in-out infinite;
+}
+
+@keyframes colors {
+  0% {
+    stroke: #ffffff;
+  }
+  100% {
+    stroke: #ffffff;
+  }
+}
+@keyframes dash {
+  0% {
+    stroke-dashoffset: 187;
+  }
+  50% {
+    stroke-dashoffset: 46.75;
+    transform: rotate(135deg);
+  }
+  100% {
+    stroke-dashoffset: 187;
+    transform: rotate(450deg);
+  }
+}
+
+/*# sourceMappingURL=app.css.map */

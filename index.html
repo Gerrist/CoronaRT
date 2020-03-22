@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description"
+          content="Live dienstregeling, locaties, updates, vertragingen en uitval van de bus, trein, tram, veerpond en metro op één plek.">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>@import "assets/css/ui.css";
+    @import "assets/css/app.css";</style>
+    <script src="assets/js/ui.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+    <script src="https://momentjs.com/downloads/moment-timezone-with-data.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.6.0/proj4.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/geolib@3.2.1/lib/index.min.js"></script>
+    <script>
+        if (location.protocol != 'https:' && window.location.href.indexOf('localhost') == -1) {
+            location.href = 'https:' + window.location.href.substring(window.location.protocol.length);
+        }
+
+        moment.tz.setDefault("Europe/Amsterdam");
+
+        let socket = null;
+
+        function calcCrow(lat1, lon1, lat2, lon2)
+        {
+            var R = 6371; // km
+            var dLat = toRad(lat2-lat1);
+            var dLon = toRad(lon2-lon1);
+            var lat1 = toRad(lat1);
+            var lat2 = toRad(lat2);
+
+            var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            var d = R * c;
+            return d;
+        }
+
+        // Converts numeric degrees to radians
+        function toRad(Value)
+        {
+            return Value * Math.PI / 180;
+        }
+
+        // setTimeout(() => {
+        //     UI.notify({
+        //         title: 'Waarschuwing',
+        //         text: 'Zorg ervoor dat alle velden ingevuld zijn',
+        //         buttons: [
+        //             {
+        //                 text: 'Ok',
+        //                 close: () => {
+        //                     console.log('close');
+        //                     UI.closeNotification();
+        //                 },
+        //                 type: 'button-normal'
+        //             }
+        //         ]
+        //     });
+        // }, 100);
+    </script>
+
+    <script>
+        function request(url, method = 'GET', cb) {
+            return new Promise((resolve, reject) => {
+                const Http = new XMLHttpRequest();
+                Http.open(method.toUpperCase(), url);
+                Http.send();
+
+                Http.onreadystatechange = (e) => {
+                    if(Http.readyState === 4){
+                        setTimeout(() => {
+                            cb(Http.response);
+                        }, 500);
+                    }
+
+                }
+            });
+        }
+
+        let ui = new UI();
+
+        ui.ready().then(() => {
+            ui.init({
+                activities: {
+                    main: {
+                        onRender: ($root) => {
+
+
+                            let $loadingText = $root.querySelector('#loadingText');
+
+                            $loadingText.innerHTML = 'Data downloaden';
+
+                            request('https://services.opengeo.nl/ptds/index.json', 'GET', (data) => {
+                                data = JSON.parse(data);
+
+
+
+                                let today = new Date().toISOString().split('T')[0];
+
+                                let dataset = null;
+
+                                data.publications.forEach(p => {
+                                    if(p.date == today){
+                                        dataset = p;
+                                    }
+                                });
+
+                                if(dataset){
+                                    $loadingText.innerHTML = 'Verbinding maken met back office';
+
+                                    socket = new WebSocket("ws://" + location.host);
+
+                                    socket.addEventListener('open', function (event) {
+                                        socket.send(JSON.stringify({
+                                            event: 'DEVICECONNECT',
+                                            ts: new Date().getTime()
+                                        }));
+
+                                        $loadingText.innerHTML = 'Data van vandaag downloaden';
+
+                                        request('/api/lladder.json?url=' + encodeURI(dataset.url + '/HTMbuzz.json'), 'GET', (data) => {
+                                            data = JSON.parse(data);
+
+
+                                            $loadingText.innerHTML = 'Data van vandaag verwerken';
+
+
+                                            let passdata = {};
+                                            passdata.operators = {};
+                                            passdata.lines = {};
+                                            passdata.trips = {};
+
+
+                                            Object.keys(data.vehicleJourneys).forEach(j => {
+                                                let journey = data.vehicleJourneys[j];
+
+                                                if(passdata.operators[j.split(":")[0]] == null){
+                                                    passdata.operators[j.split(":")[0]] = {};
+                                                }
+
+                                                if(passdata.lines[j.split(":")[0] + ':' + j.split(":")[1]] == null){
+                                                    passdata.lines[j.split(":")[0] + ':' + j.split(":")[1]] = {};
+                                                }
+
+                                                if(passdata.trips[j.split(":")[0] + ':' + j.split(":")[1]] == null){
+                                                    passdata.trips[j.split(":")[0] + ':' + j.split(":")[1]] = [];
+                                                }
+
+                                                let id = j.split(":");
+
+                                                journey.id = id[0] + ':' + id[1] + ':' + id[2];
+                                                passdata.trips[j.split(":")[0] + ':' + j.split(":")[1]].push(journey);
+
+                                                // if(passdata.trips[j.split(":")[0] + ':' + j.split(":")[1] + ':' + j.split(":")[2]] == null){
+                                                //     passdata.trips[j.split(":")[0] + ':' + j.split(":")[1] + ':' + j.split(":")[2]] = journey;
+                                                // }
+
+                                            });
+
+                                            passdata.operators = Object.keys(passdata.operators);
+                                            passdata.operators.sort();
+
+                                            passdata.lines = Object.keys(passdata.lines);
+                                            passdata.lines.sort();
+
+
+                                            ui.sendActivity('operatorSelector', {passdata, data});
+
+                                        });
+                                    });
+                                } else {
+                                    console.log('No data found');
+                                }
+                            });
+                        }
+                    },
+                    operatorSelector: {
+                        onRender: ($root, data) => {
+                            let $operatorList = document.createElement('section');
+                            data.passdata.operators.forEach(o => {
+                                let $operator = document.createElement('div');
+                                $operator.classList.add('operator');
+                                $operator.innerHTML = o;
+                                $operator.onclick = () => {
+                                    ui.sendActivity('lineSelector', {selected: o, all: data});
+                                };
+                                $operatorList.appendChild($operator);
+                            });
+
+                            $root.querySelector('content').appendChild($operatorList);
+                        }
+                    },
+                    lineSelector: {
+                        onRender: ($root, data) => {
+                            let $lineList = document.createElement('section');
+
+
+                            data.all.passdata.lines.forEach(o => {
+                                let $line = document.createElement('div');
+                                $line.classList.add('line');
+                                $line.innerHTML = o.split(':')[1];
+                                $line.onclick = () => {
+                                    ui.sendActivity('tripSelector', {selected: o, all: data});
+                                };
+                                if(o.split(':')[0] == data.selected){
+                                    $lineList.appendChild($line);
+                                }
+                            });
+
+                            $root.querySelector('content').appendChild($lineList);
+                        }
+                    },
+                    tripSelector: {
+                        onRender: ($root, data) => {
+                            let $tripList = document.createElement('section');
+
+                            // data.selected.sort((a, b) => {
+                            //     if(parseInt(a.id.split(':')[2]) > parseInt(b.id.split(':')[2])){
+                            //         return 1;
+                            //     }
+                            //     if(parseInt(a.id.split(':')[2]) < parseInt(b.id.split(':')[2])){
+                            //         return -1;
+                            //     }
+                            //     return 0;
+                            // });
+
+                            let selected = data.selected;
+                            data = data.all.all.data;
+
+                            let today = moment();
+                            today.set({hour:0,minute:0,second:0,millisecond:0});
+                            today = today.unix();
+
+                            let journeys = [];
+
+                            Object.keys(data.vehicleJourneys).forEach(k => {
+                                if(k.indexOf(selected) == 0){
+                                    let j = data.vehicleJourneys[k];
+
+                                    let journey = {};
+                                    journey.id = k;
+                                    journey.stops = [];
+
+                                    data.journeyPatterns[j.journeyPatternRef].pointsInSequence.forEach((p, k) => {
+                                        let stop = {};
+                                        stop.id = p;
+                                        stop.name = data.scheduledStopPoints[p].name;
+                                        stop.x = data.scheduledStopPoints[p].x;
+                                        stop.y = data.scheduledStopPoints[p].y;
+                                        stop.lat = data.scheduledStopPoints[p].lat;
+                                        stop.lon = data.scheduledStopPoints[p].lon;
+                                        stop.arrivalTime = (j.times[k*2]*1)+today;
+                                        stop.departureTime = (j.times[(k*2)+1]*1)+today;
+
+                                        journey.stops.push(stop);
+                                    });
+
+
+                                    journeys.push(journey);
+
+                                    // console.log(j);
+                                }
+                            });
+
+
+                            journeys.forEach(o => {
+                                let $trip = document.createElement('div');
+                                $trip.classList.add('trip');
+
+
+
+                                let firstStop = o.stops[0];
+                                let lastStop = o.stops[o.stops.length - 1];
+
+
+                                let $tripNumber = document.createElement('div');
+                                $tripNumber.classList.add('tripNumber');
+                                $tripNumber.innerHTML = o.id.split(":")[2] + '</span>';
+                                $trip.appendChild($tripNumber);
+
+
+                                let $firstStop = document.createElement('div');
+                                $firstStop.classList.add('firstStop')
+                                $firstStop.innerHTML = 'Van <span>' + firstStop.name + '</span>';
+                                $trip.appendChild($firstStop);
+
+
+                                let $lastStop = document.createElement('div');
+                                $lastStop.classList.add('lastStop')
+                                $lastStop.innerHTML = 'Naar <span>' + lastStop.name + '</span>';
+                                $trip.appendChild($lastStop);
+
+
+                                // $trip.innerHTML = o.id.split(':')[2] + ' (' + firstStop.name + ' naar ' + lastStop.name + ')';
+                                $trip.onclick = (e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    ui.sendActivity('tripComposer', {journey: o});
+                                };
+                                $tripList.appendChild($trip);
+                            });
+
+                            $root.querySelector('content').appendChild($tripList);
+                        }
+                    },
+                    tripComposer: {
+                        onRender: ($root, data) => {
+                            console.log("tripComposer", data);
+                            let offset = 0;
+
+                            let times = (offsetVal) => {
+                                offset = offsetVal*60*1000;
+
+                                $callsBox.innerHTML = "";
+
+                                data.journey.stops.forEach(s => {
+                                    let $call = document.createElement('div');
+                                    $call.innerHTML = "";
+                                    $call.innerHTML += "A: <b>" + moment((s.arrivalTime*1000) + offset).format('h:mm:ss') + "</b> ";
+                                    $call.innerHTML += "V: <b>" + moment((s.arrivalTime*1000) + offset).format('h:mm:ss') + "</b> ";
+                                    $call.innerHTML += "- ";
+                                    $call.innerHTML += "<b>" + s.name + "</b> ";
+                                    $callsBox.append($call);
+                                });
+                            };
+
+                            let offsetVal = 0;
+
+
+                            let $offsetBox = document.createElement('div');
+                            $offsetBox.classList.add('box');
+                            $offsetBox.classList.add('offset');
+
+
+                            let $ht = document.createElement('subheader');
+                            $ht.style.color = "#000";
+                            $ht.innerText = "Tijdsafwijking";
+                            $offsetBox.appendChild($ht);
+
+                            let $plus = document.createElement('button');
+                            $plus.setAttribute('class', 'offset-plus');
+                            $plus.style.display = "inline-block";
+                            $plus.style.width = "unset";
+                            $plus.innerText = "+";
+                            $plus.onclick = () => {
+                                offsetVal++ ;
+                                updateOffset();
+                            };
+                            $offsetBox.appendChild($plus);
+
+                            let $minus = document.createElement('button');
+                            $minus.style.display = "inline-block";
+                            $minus.style.width = "unset";
+                            $minus.setAttribute('class', 'offset-minus');
+                            $minus.innerText = "-";
+                            $minus.onclick = () => {
+                                offsetVal--;
+                                updateOffset();
+                            };
+                            $offsetBox.appendChild($minus);
+
+                            let $offText = document.createElement('span');
+                            $offText.style.display = "inline-block";
+                            $offText.style.width = "unset";
+                            $offsetBox.appendChild($offText);
+
+                            $root.querySelector('content').appendChild($offsetBox);
+
+                            let $callsBox = document.createElement('div');
+                            $callsBox.classList.add('box');
+                            $callsBox.classList.add('calls');
+                            $root.querySelector('content').appendChild($callsBox);
+
+
+                            let updateOffset = () => {
+                                $offText.innerText = offsetVal.toString() + ' minuten';
+                                times(offsetVal);
+                            };
+
+                            updateOffset();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            let $tripStartBox = document.createElement('div');
+                            $tripStartBox.classList.add('box');
+                            $tripStartBox.classList.add('trip');
+
+                            let $input = document.createElement('input');
+                            $input.setAttribute('type', 'number');
+                            $input.setAttribute('placeholder', 'Wagenparknummer');
+                            $tripStartBox.appendChild($input);
+
+                            let $button = document.createElement('button');
+                            $button.innerText = 'Rit starten';
+                            $button.onclick = () => {
+                                if($input.value.trim() == ""){
+                                    alert("U dient een wagenpark nummer in te voeren");
+                                } else {
+                                    let vehicle = parseInt($input.value.trim());
+
+                                    socket.send(JSON.stringify({
+                                        Event: 'INIT',
+                                        DataOwnerCode: data.journey.id.split(':')[0],
+                                        LinePlanningNumber: data.journey.id.split(':')[1],
+                                        OperatingDay: data.journey.id.split(':')[3],
+                                        JourneyNumber: data.journey.id.split(':')[2],
+                                        Timestamp: new Date().getTime(),
+                                        VehicleNumber: vehicle,
+                                        DepartureOffset: offset/1000,
+                                    }));
+
+                                    window.jid = data.journey.id;
+
+                                    $button.style.opacity = 0.3;
+                                    $button.innerText = 'Laden...';
+
+
+                                    navigator.geolocation.getCurrentPosition((ld) => {
+                                        console.log(ld);
+                                        data.vehicle = vehicle;
+                                        data.line = data.journey.id.split(':')[1];
+                                        data.offset = offset;
+                                        ui.sendActivity('trip', data);
+                                    }, (err) => {
+                                        alert(err);
+                                    });
+                                }
+                            };
+                            $tripStartBox.appendChild($button);
+
+                            let $text = document.createElement('div');
+                            $text.innerText = 'Het kan zijn dat er om je locatie word gevraagd zodat halteergegevens en GPS positie correct doorgegeven kunnen worden. Dit verzoek dien je te accepteren.';
+                            $tripStartBox.appendChild($text);
+
+                            $root.querySelector('content').appendChild($tripStartBox);
+                        }
+                    },
+                    trip: {
+                        onRender: ($root, data) => {
+                            console.log("trip", data);
+
+                            $root.querySelector('header').innerText = 'Lijn ' + data.line;
+
+
+                            data.journey.stops.forEach(s => {
+                                console.log(s);
+                            });
+
+                            let onStop = false;
+                            let lastLoc = 0;
+
+                            let interval;
+
+                            let end = () => {
+                                socket.send(JSON.stringify({
+                                    Event: 'END',
+                                    DataOwnerCode: window.jid.split(':')[0],
+                                    LinePlanningNumber: window.jid.split(':')[1],
+                                    OperatingDay: window.jid.split(':')[3],
+                                    JourneyNumber: window.jid.split(':')[2],
+                                    Timestamp: new Date().getTime(),
+                                    VehicleNumber: data.vehicle,
+                                }));
+
+                                clearInterval(interval);
+
+                                alert('Rit afgesloten!');
+
+                                ui.sendActivity('main');
+                            };
+
+                            $root.querySelector('#endTripBtn').onclick = () => {
+                                end();
+                            };
+
+                            interval = setInterval(() => {
+                                navigator.geolocation.getCurrentPosition((ld) => {
+                                        console.clear();
+                                        data.journey.stops.forEach((s, k) => {
+                                            let dist = calcCrow(ld.coords.latitude, ld.coords.longitude, s.lat, s.lon)*1000;
+                                            console.log(s.name + ' ' + dist + ' meters away. ' + (dist < 50 ? 'ON STOP' : ''));
+                                            if(dist < 100){
+                                                if(!onStop){
+                                                    onStop = true;
+
+                                                    socket.send(JSON.stringify({
+                                                        Event: 'ARRIVAL',
+                                                        DataOwnerCode: window.jid.split(':')[0],
+                                                        LinePlanningNumber: window.jid.split(':')[1],
+                                                        OperatingDay: window.jid.split(':')[3],
+                                                        JourneyNumber: window.jid.split(':')[2],
+                                                        Timestamp: new Date().getTime(),
+                                                        VehicleNumber: data.vehicle,
+                                                        Punctuality: ((s.arrivalTime - new Date().getTime())/1000) + data.offset,
+                                                        UserStopCode: s.id,
+                                                        lat: ld.coords.latitude,
+                                                        lon: ld.coords.longitude
+                                                    }));
+                                                }
+
+                                                if(data.journey.stops[data.journey.stops.length - 1].id === s.id){
+                                                    end();
+                                                }
+                                            } else {
+                                                if(onStop && dist >= 100 ){
+                                                    onStop = false;
+
+                                                    socket.send(JSON.stringify({
+                                                        Event: 'DEPARTURE',
+                                                        DataOwnerCode: window.jid.split(':')[0],
+                                                        LinePlanningNumber: window.jid.split(':')[1],
+                                                        OperatingDay: window.jid.split(':')[3],
+                                                        JourneyNumber: window.jid.split(':')[2],
+                                                        Timestamp: new Date().getTime(),
+                                                        VehicleNumber: data.vehicle,
+                                                        Punctuality: 0,
+                                                        UserStopCode: s.id,
+                                                        lat: ld.coords.latitude,
+                                                        lon: ld.coords.longitude
+                                                    }));
+                                                }
+                                            }
+                                        });
+
+
+                                }, (err) => {
+                                    clearInterval(interval);
+                                    alert(err);
+                                });
+                            }, 2500);
+
+                            // socket.send(JSON.stringify({
+                            //     Event: 'ARRIVAL',
+                            //     DataOwnerCode: window.jid.split(':')[0],
+                            //     LinePlanningNumber: window.jid.split(':')[1],
+                            //     OperatingDay: window.jid.split(':')[3],
+                            //     JourneyNumber: window.jid.split(':')[2],
+                            //     Timestamp: new Date().getTime(),
+                            //     VehicleNumber: vehicle,
+                            //     Punctuality: 0,
+                            //     UserStopCode: 'HTM:xxxx',
+                            //     lat: ld.coords.latitude,
+                            //     lon: ld.coords.longitude
+                            // }));
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+
+    <!--    <style>-->
+    <!--        body{-->
+    <!--            background-color: black;-->
+    <!--            color: white;-->
+    <!--        }-->
+    <!--    </style>-->
+
+    <title>CoronaRT</title>
+</head>
+<body lang="nl">
+<activities>
+    <activity main id="main">
+        <content>
+            <div class="loadingIcon">
+                <svg class="spinner" width="65px" height="65px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
+                    <circle class="path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33"
+                            r="30"></circle>
+                </svg>
+            </div>
+            <div id="loadingText">
+                Laden...
+            </div>
+        </content>
+    </activity>
+    <activity id="operatorSelector">
+        <content>
+            <header>Selecteer vervoerder</header>
+        </content>
+    </activity>
+    <activity id="lineSelector">
+        <content>
+            <header>Selecteer lijn</header>
+        </content>
+    </activity>
+    <activity id="tripSelector">
+        <content>
+            <header>Selecteer rit</header>
+            <subheader>Deze rit gebruik je als basis voor een nieuwe rit met eventuele afwijkende tijden.</subheader>
+        </content>
+    </activity>
+    <activity id="tripComposer">
+        <content>
+            <header>Mijn rit</header>
+        </content>
+    </activity>
+    <activity id="trip">
+        <content>
+            <header></header>
+            <button id="endTripBtn" class="button-inverted">Rit vroegtijdig stoppen</button>
+        </content>
+    </activity>
+</activities>
+
+<containers></containers>
+
+</body>
+</html>

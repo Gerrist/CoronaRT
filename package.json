@@ -1,0 +1,22 @@
+{
+  "name": "CoronaRT",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "geolib": "^3.2.1",
+    "proj4": "^2.6.0",
+    "proj4js": "^10.0.0",
+    "rdnaptrans": "^0.3.0",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.5",
+    "ws": "^7.2.3"
+  }
+}
